@@ -100,7 +100,7 @@ set(MT_GUI_EXTRA_LIBS "${MT_CORE_EXTRA_LIBS}")
 set(MT_GUI_EXTRA_LIBS "${MT_GUI_EXTRA_LIBS};${MT_WX_LIB};${MT_WX_EXTRA_LIBS}")
 
 #### MT_Tracking extra libraries
-set(MT_TRACKING_EXTRA_LIBS "${MT_GUI_EXTRA_LIBS}")
+set(MT_TRACKING_EXTRA_LIBS "${MT_GUI_EXTRA_LIBS};${MT_BOOST_LIB};${MT_PROTOBUF_LIB}")
 
 if(MT_HAVE_ARTK)
   set(MT_TRACKING_EXTRA_LIBS "${MT_TRACKING_EXTRA_LIBS};${MT_ARTK_LIB}")
@@ -162,6 +162,8 @@ endfunction(MT_link_tracking_app)
 
 function(MT_link_robot_app APP_NAME)
   target_link_libraries(${APP_NAME} ${MT_ROBOT_LIBS} ${MT_ROBOT_EXTRA_LIBS})
+  message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+  message("${MT_ROBOT_EXTRA_LIBS}")
 endfunction(MT_link_robot_app)
 
 #### Blanket functions

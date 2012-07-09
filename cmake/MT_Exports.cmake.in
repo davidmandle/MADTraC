@@ -82,4 +82,7 @@ if(MT_HAVE_AVT)
   set(MT_AVT_LIB "${AVT_LIB}" CACHE STRING "AVT Library")
 endif(MT_HAVE_AVT)  
 
+set(MT_PROTOBUF_LIB "${PROTOBUF_LIB}" CACHE PATH "Protobuf library")
+set(MT_BOOST_LIB "${BOOST_LIB}" CACHE PATH "Boost library")
+
 set(MT_USE_WX_JOYSTICK ${MT_USE_WX_JOYSTICK})

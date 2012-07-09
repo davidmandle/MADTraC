@@ -13,6 +13,8 @@
 #  macports/darwinports
 cmake_minimum_required (VERSION 2.8)
 
+set(module_name "MT_Tracking")
+
 #######################################################
 # Target: MT_Tracking.a
 #######################################################
@@ -60,13 +62,36 @@ set(trackers_srcs
   ./trackers/YA/YABlobber.cpp     ./trackers/YA/YABlobber.h
   ./trackers/YA/YASegmenter.cpp     ./trackers/YA/YASegmenter.h
   ./trackers/DS/DSGYA_Segmenter.cpp ./trackers/DS/DSGYA_Segmenter.h
-  ./trackers/DS/DSGYBlobber.cpp    ./trackers/DS/DSGYBlobber.h)  
+  ./trackers/DS/DSGYBlobber.cpp    ./trackers/DS/DSGYBlobber.h)
+
+include_directories(
+  ${Boost_INCLUDE_DIRS}
+)
+
+set(proto_files
+  ./net/MT_AgentStates.proto)
+PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS "${proto_files}")
+message(${PROTO_SRCS})
+include_directories(
+  ${PROTOBUF_INCLUDE_DIRS}
+  ${CMAKE_BINARY_DIR}/MT/${module_name}
+  )
+
+set(net_srcs
+  ./net/MT_AgentStatesPublisher.cc  ./net/MT_AgentStatesPublisher.h
+  ./net/MT_AgentStatesSubscriber.cc ./net/MT_AgentStatesSubscriber.h
+  ./net/MT_Publisher.cc             ./net/MT_Publisher.h
+  ./net/MT_Subscriber.cc            ./net/MT_Subscriber.h  
+)
+
+set(protobuf_srcs
+  ${PROTO_SRCS}                     ${PROTO_HDRS}
+)
 
 include_directories(${WX_INCLUDE})
 add_definitions(${WX_DEFS})
 
-set(module_name "MT_Tracking")
-set(module_srcs ${3rdparty_srcs} ${base_srcs} ${capture_srcs} ${cv_srcs} ${dialogs_srcs} ${trackers_srcs})
+set(module_srcs ${3rdparty_srcs} ${base_srcs} ${capture_srcs} ${cv_srcs} ${dialogs_srcs} ${trackers_srcs} ${net_srcs})
 
 if(WITH_ARTK)
   include_directories(${ARTK_INCLUDE})
@@ -76,12 +101,14 @@ endif(WITH_ARTK)
 # tell cmake this is a static library built from the
 #   given sources
 if(BUILD_SHARED)
-  add_library(${module_name} SHARED ${module_srcs})
+  add_library(${module_name} SHARED ${module_srcs} ${protobuf_srcs})
   target_link_libraries(${module_name} MT_Core)
   target_link_libraries(${module_name} MT_GUI)
   target_link_libraries(${module_name} ${WX_EXTRA_LIBS})
+  target_link_libraries(${module_name} ${MT_PROTOBUF_LIB})
+  target_link_libraries(${module_name} ${MT_BOOST_LIB})
 else(BUILD_SHARED)  
-  add_library(${module_name} STATIC ${module_srcs})
+  add_library(${module_name} STATIC ${module_srcs} ${protobuf_srcs})
 endif(BUILD_SHARED)
 
 if(HAVE_OPENCV_FRAMEWORK)
@@ -105,5 +132,23 @@ endif()
 # endif(MSVC)    
 
 include(${CMAKE_SOURCE_DIR}/cmake/MT_BuildFunctions.cmake)
-MT_MAKE_MODULE_HEADER(. "${module_name}" "${module_srcs}")
+
+foreach(proto_file ${proto_files})
+  string(REPLACE ".proto" ".pb.h" transposed_protobuf_src ${proto_file})
+  set(transposed_protobuf_srcs "${transposed_protobuf_srcs};${transposed_protobuf_src}")
+endforeach()
+MT_MAKE_MODULE_HEADER(. "${module_name}" "${module_srcs};${transposed_protobuf_srcs}")
+
+# Protobuf sources get dumped in the binary directory, so they have to be treated differently than the rest of the module sources
+foreach(proto_file ${proto_files})
+  get_filename_component(tree_part "${proto_file}" PATH)
+  get_filename_component(name_part "${proto_file}" NAME_WE)
+
+  # using a custom command here makes sure the headers get copied whenever they change
+  add_custom_command(TARGET "${module_name}"
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/include/MT/${module_name}/${tree_part}"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/MT/${module_name}/${name_part}.pb.h" "${CMAKE_BINARY_DIR}/include/MT/${module_name}/${tree_part}/"
+    )
+endforeach()
 MT_COPY_MODULE_HEADERS("${module_name}" "${module_srcs}" "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/include/MT/${module_name}")

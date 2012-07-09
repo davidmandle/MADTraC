@@ -417,6 +417,20 @@ if(MSVC)
   
 endif(MSVC)
 
+##################################################
+# Protobuf Support
+find_package(Protobuf REQUIRED)
+if(PROTOBUF_FOUND)
+  set(PROTOBUF_LIB "${PROTOBUF_LIBRARIES}" CACHE PATH "Protobuf Libs")
+endif(PROTOBUF_FOUND)
+
+##################################################
+# Boost Support
+find_package(Boost 1.36.0 COMPONENTS system thread)
+if (Boost_FOUND)  
+  set(BOOST_LIB "${Boost_LIBRARIES}" CACHE PATH "Boost Libs")
+endif(Boost_FOUND)
+
 if(MSVC)
   option(MT_DEBUG_CONSOLE "Enable debug console for printf output" OFF)
   if(MT_DEBUG_CONSOLE)

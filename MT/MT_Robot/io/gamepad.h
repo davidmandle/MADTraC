@@ -50,7 +50,7 @@ typedef struct cookie_struct
     IOHIDElementCookie gU4Cookie;
 } *cookie_struct_t;
 
-#elif defined(_WIN32)
+#elif defined(_WIN32) || defined(__linux)
 
 #ifndef MT_GAMEPAD_USE_WX
 #define MT_GAMEPAD_USE_WX

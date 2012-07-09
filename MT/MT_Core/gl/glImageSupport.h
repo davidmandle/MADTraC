@@ -30,6 +30,10 @@
 #if defined(MT_HAVE_OPENCV_FRAMEWORK)
 #include <OpenCV/OpenCV.h>
 #else
+// Work around the True and False defs in X11 that conflict with
+// the True False classes in flann
+#undef True
+#undef False
 #include <cv.h>
 #include <highgui.h>
 #endif

@@ -7,7 +7,7 @@
 static const unsigned int QUEUE_LENGTH = 25;
 
 MT_HIDGamePad::MT_HIDGamePad()
-#ifdef MT_GAMEPAD_USE_WX
+#ifdef MT_GAMEPAD_USE_WX  
   : myJoystick(wxJOYSTICK1)
 #endif
 {
