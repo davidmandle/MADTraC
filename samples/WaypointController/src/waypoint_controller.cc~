@@ -1,0 +1,48 @@
+#include "MT_Core.h"
+#include "MT_Tracking.h"
+#include <boost/lexical_cast.hpp>
+#include <boost/bind.hpp>
+
+class WaypointController {
+
+public:
+  WaypointController(char* parent_address, char* parent_port, unsigned short port)
+    : subscriber(parent_address, parent_port, boost::bind(&WaypointController::HandleNewMessage, this)),
+      publisher(port) {
+    subscriber.Run();
+  }
+  
+public:
+  void HandleNewMessage(MT_AgentStates agent_states) {
+    std::cout << "yay!" << std::endl;
+  }
+
+  MT_AgentStatesSubscriber subscriber;
+  MT_AgentStatesPublisher publisher;
+  MT_AgentStates incoming_agent_states;
+  
+};
+
+int main(int argc, char* argv[])
+{
+  try
+  {
+    // Check command line arguments.
+    if (argc != 4)
+    {
+      std::cerr << "Usage: " << argv[0] <<  " <parent_address> <parent_port> <port>" << std::endl;
+      return 1;
+    }
+
+    unsigned short port = boost::lexical_cast<unsigned short>(argv[3]);
+
+    WaypointController waypoint_controller(argv[1], argv[2], port);
+
+  }
+  catch (std::exception& e)
+  {
+    std::cerr << e.what() << std::endl;
+  }
+
+  return 0;
+}

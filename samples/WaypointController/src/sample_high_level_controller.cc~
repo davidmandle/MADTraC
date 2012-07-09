@@ -1,0 +1,33 @@
+#include "MT_Core.h"
+//#include <boost/lexical_cast.hpp>
+
+void HandleNewMessage(MT_AgentStates agent_states) {
+  std::cout << "yay!" << std::endl;
+}
+
+int main(int argc, char* argv[])
+{
+  try
+  {
+    // Check command line arguments.
+    if (argc != 3)
+    {
+      std::cerr << "Usage: " << argv[0] <<  " <agent_state_publisher> <port_to_subscribe_to>" << std::endl;
+      return 1;
+    }
+
+    //unsigned short publishing_port = boost::lexical_cast<unsigned short>(argv[3]);
+
+    //MT_AgentStates test_data;
+
+    MT_AgentStatesSubscriber subscriber(argv[1], argv[2], &HandleNewMessage);
+    //contrack::AgentStatesPublisher publisher(publishing_port);
+    subscriber.Run();
+  }
+  catch (std::exception& e)
+  {
+    std::cerr << e.what() << std::endl;
+  }
+
+  return 0;
+}
