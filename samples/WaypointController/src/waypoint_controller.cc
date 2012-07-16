@@ -7,9 +7,16 @@ class WaypointController {
 
 public:
   WaypointController(char* parent_address, char* parent_port, unsigned short port)
-    : publisher(port), 
-      subscriber(parent_address, parent_port, boost::bind(&WaypointController::HandleNewMessage, this, _1)) {
-    subscriber.Run();
+    : publisher_(port), 
+      subscriber_(parent_address, parent_port) {
+    while (true) {
+      if (subscriber_.NumberOfQueuedMessages() > 0) {
+	MT_AgentStates agent_states = subscriber_.PopMostRecentReceivedMessage();
+	subscriber_.EmptyQueue();
+	HandleNewMessage(agent_states);
+      }
+      //boost::this_thread::sleep(boost::posix_time::seconds(1)); 
+    }
   }
   
 private:
@@ -64,12 +71,11 @@ private:
 	//printf("Control out: speed %f, vert %f, steer %f\n", u[BELUGA_CONTROL_FWD_SPEED], u[BELUGA_CONTROL_VERT_SPEED], u[BELUGA_CONTROL_STEERING]);
       }
     }
-    publisher.Publish(agent_states);
+    publisher_.Publish(agent_states);
   }
 
-  MT_AgentStatesPublisher publisher;
-  MT_AgentStatesSubscriber subscriber;
-  MT_AgentStates incoming_agent_states;
+  MT_AgentStatesPublisher publisher_;
+  MT_AgentStatesSubscriber subscriber_;
   
 };
 
