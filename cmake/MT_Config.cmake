@@ -40,6 +40,8 @@ endif(MT_HAVE_OPENCV)
 if(MT_HAVE_AVT)
   include_directories(${MT_AVT_INC})
 endif(MT_HAVE_AVT)  
+include_directories(${MT_BOOST_INCLUDE})
+include_directories(${MT_PROTOBUF_INCLUDE})
 
 ######################################################################
 # Preprocessor definitions
@@ -74,10 +76,10 @@ if(NOT MSVC)
   set(MT_TRACKING_LIBS ${MT_LIBS_DIR}/libMT_Tracking.a ${MT_GUI_LIBS}) 
   set(MT_ROBOT_LIBS ${MT_LIBS_DIR}/libMT_Robot.a ${MT_TRACKING_LIBS})
 else(NOT MSVC)
-  set(MT_CORE_LIBS ${MT_LIBS_DIR}/Release/MT_Core.lib)
-  set(MT_GUI_LIBS ${MT_CORE_LIBS} ${MT_LIBS_DIR}/Release/MT_GUI.lib)
-  set(MT_TRACKING_LIBS ${MT_GUI_LIBS} ${MT_LIBS_DIR}/Release/MT_Tracking.lib)
-  set(MT_ROBOT_LIBS ${MT_TRACKING_LIBS} ${MT_LIBS_DIR}/Release/MT_Robot.lib)
+	set(MT_CORE_LIBS ${MT_LIBS_DIR}/${CMAKE_CFG_INTDIR}/MT_Core.lib)
+	set(MT_GUI_LIBS ${MT_CORE_LIBS} ${MT_LIBS_DIR}/${CMAKE_CFG_INTDIR}/MT_GUI.lib)
+	set(MT_TRACKING_LIBS ${MT_GUI_LIBS} ${MT_LIBS_DIR}/${CMAKE_CFG_INTDIR}/MT_Tracking.lib)
+	set(MT_ROBOT_LIBS ${MT_TRACKING_LIBS} ${MT_LIBS_DIR}/${CMAKE_CFG_INTDIR}/MT_Robot.lib)
 endif(NOT MSVC)  
 
 ##### MT_Core extra libraries
@@ -162,8 +164,6 @@ endfunction(MT_link_tracking_app)
 
 function(MT_link_robot_app APP_NAME)
   target_link_libraries(${APP_NAME} ${MT_ROBOT_LIBS} ${MT_ROBOT_EXTRA_LIBS})
-  message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-  message("${MT_ROBOT_EXTRA_LIBS}")
 endfunction(MT_link_robot_app)
 
 #### Blanket functions

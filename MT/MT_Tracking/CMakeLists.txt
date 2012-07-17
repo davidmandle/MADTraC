@@ -71,7 +71,6 @@ include_directories(
 set(proto_files
   ./net/MT_AgentStates.proto)
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS "${proto_files}")
-message(${PROTO_SRCS})
 include_directories(
   ${PROTOBUF_INCLUDE_DIRS}
   ${CMAKE_BINARY_DIR}/MT/${module_name}
@@ -143,6 +142,8 @@ MT_MAKE_MODULE_HEADER(. "${module_name}" "${module_srcs};${transposed_protobuf_s
 foreach(proto_file ${proto_files})
   get_filename_component(tree_part "${proto_file}" PATH)
   get_filename_component(name_part "${proto_file}" NAME_WE)
+  message("${tree_part}")
+  message("${name_part}")
 
   # using a custom command here makes sure the headers get copied whenever they change
   add_custom_command(TARGET "${module_name}"

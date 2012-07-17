@@ -83,6 +83,8 @@ if(MT_HAVE_AVT)
 endif(MT_HAVE_AVT)  
 
 set(MT_PROTOBUF_LIB "${PROTOBUF_LIB}" CACHE PATH "Protobuf library")
+set (MT_PROTOBUF_INCLUDE "${PROTOBUF_INCLUDE}" CACHE PATH "Protobuf include directory")
 set(MT_BOOST_LIB "${BOOST_LIB}" CACHE PATH "Boost library")
+set(MT_BOOST_INCLUDE "${BOOST_INCLUDE}" CACHE PATH "Boost include directory")
 
 set(MT_USE_WX_JOYSTICK ${MT_USE_WX_JOYSTICK})

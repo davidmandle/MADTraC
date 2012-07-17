@@ -411,10 +411,13 @@ int MT_ComIO::ReadData(unsigned char* result, unsigned long max_length)
 
 #else  // Windows implementation using CSerial
 
+	DWORD bytes_read = 0;
+
     // Initialize to no error
     LONG lLastError = ERROR_SUCCESS;
     // read (length) bytes from the port
-    lLastError = serial.Read(result, max_length);
+    lLastError = serial.Read(result, max_length, &bytes_read);
+	//printf("Read %d bytes\n", bytes_read);
     // Let us know if there is an eror
     if(lLastError != ERROR_SUCCESS){
         printf("Serial error recieving %d bytes on %s (error %d)\n",

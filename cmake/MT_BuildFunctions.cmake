@@ -43,8 +43,8 @@ function(MT_MAKE_MODULE_HEADER dir mod_name src_list)
 #pragma comment(lib, \"advapi32.lib\")
 #pragma comment(lib, \"wsock32.lib\")
 #pragma comment(lib, \"wininet.lib\")
-
 #pragma comment(lib, \"MT_Core.lib\")
+#define WIN32_LEAN_AND_MEAN 
 #endif /* _MSC_VER */
 
 ")

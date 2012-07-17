@@ -2,6 +2,7 @@
 #include "MT_AgentStates.pb.h"
 #include "MT_AgentStatesSubscriber.h"
 #include <boost/function.hpp>
+#include <iostream>
 
 MT_AgentStatesSubscriber::MT_AgentStatesSubscriber(const std::string& host, const std::string& service, boost::function<void (MT_AgentStates)> handle_new_message)
   : MT_Subscriber(host, service),

@@ -419,16 +419,25 @@ endif(MSVC)
 
 ##################################################
 # Protobuf Support
+
+set(PROTOBUF_LIBRARY "D:/dsrc/protobuf-2.4.1/vsprojects/${CMAKE_CFG_INTDIR}/libprotobuf.lib" CACHE PATH "Protocol Buffer Library")
+set(PROTOBUF_INCLUDE_DIR "D:/dsrc/protobuf-2.4.1/vsprojects/include" CACHE PATH "Protocol Buffer Include Directory")
+set(PROTOBUF_PROTOC_EXECUTABLE "D:/dsrc/protobuf-2.4.1/vsprojects/${CMAKE_CFG_INTDIR}/protoc.exe" CACHE PATH "Protocol Executable Directory")
+
 find_package(Protobuf REQUIRED)
 if(PROTOBUF_FOUND)
   set(PROTOBUF_LIB "${PROTOBUF_LIBRARIES}" CACHE PATH "Protobuf Libs")
+  set(PROTOBUF_INCLUDE "${PROTOBUF_INCLUDE_DIR}" CACHE PATH "Protobuf Include Directory")
 endif(PROTOBUF_FOUND)
 
 ##################################################
 # Boost Support
-find_package(Boost 1.36.0 COMPONENTS system thread)
+set(BOOST_ROOT "C:/Program Files (x86)/boost/boost_1_47")
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost 1.36.0 COMPONENTS system thread date_time regex)
 if (Boost_FOUND)  
   set(BOOST_LIB "${Boost_LIBRARIES}" CACHE PATH "Boost Libs")
+  set(BOOST_INCLUDE "${Boost_INCLUDE_DIR}" CACHE PATH "Boost Include Directory")
 endif(Boost_FOUND)
 
 if(MSVC)
