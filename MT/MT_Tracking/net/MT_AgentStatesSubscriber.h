@@ -7,13 +7,12 @@
 
 class MT_AgentStatesSubscriber : public MT_Subscriber {
  public:
-  MT_AgentStatesSubscriber(const std::string& host, const std::string& service, boost::function<void (MT_AgentStates)> handle_new_message);
+  MT_AgentStatesSubscriber(const std::string& host, const std::string& service);
+  MT_AgentStates PopMostRecentReceivedMessage();
+  MT_AgentStates PopOldestReceivedMessage();
  private:
-  virtual void HandleNewMessage(std::string inbound_data);
     
-  MT_AgentStates incoming_agent_states_;
-
-  boost::function<void (MT_AgentStates)> handle_new_message_;
+  MT_AgentStates agent_states_;
 };
 
 #endif  // MT_AGENTSTATESSUBSCRIBER_H_

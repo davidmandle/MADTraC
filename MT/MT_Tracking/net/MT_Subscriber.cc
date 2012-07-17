@@ -1,43 +1,82 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
 #include <iostream>
+#include <list>
 #include "MT_Subscriber.h"
+#include "MT_NetConstants.h"
 
 MT_Subscriber::MT_Subscriber(const std::string& host, const std::string& service)
-  : io_service_(), socket_(io_service_)
+  : io_service_(),
+    socket_(io_service_),
+    host_(host),
+    service_(service),
+    connected_(false),
+    io_service_runner_(boost::bind(&MT_Subscriber::RunService, this)),
+    ping_timer_(io_service_, MT_NET_PING_CHECK_PERIOD)
 {
-  // Resolve the host name into an IP address.
-  boost::asio::ip::tcp::resolver resolver(io_service_);
-  boost::asio::ip::tcp::resolver::query query(host, service);
-  boost::asio::ip::tcp::resolver::iterator endpoint_iterator =
-    resolver.resolve(query);
-  boost::asio::ip::tcp::endpoint endpoint = *endpoint_iterator;
-
-  // Start an asynchronous connect operation.
-  socket_.async_connect(endpoint,
-			boost::bind(&MT_Subscriber::HandleConnect, this,
-				    boost::asio::placeholders::error, ++endpoint_iterator));
-  // Run until connect
-  io_service_.run_one();
 }
 
-void MT_Subscriber::Run() {
-  io_service_.poll();
+void MT_Subscriber::EmptyQueue() {
+  boost::mutex::scoped_lock lock(messages_mutex_);
+  return messages_.clear();
 }
 
-void MT_Subscriber::RunOnce() {
-  io_service_.poll_one();
+int MT_Subscriber::NumberOfQueuedMessages() {
+  boost::mutex::scoped_lock lock(messages_mutex_);
+  return messages_.size();
 }
 
-void MT_Subscriber::RunUntilReceive() {
-  io_service_.run_one();
+std::string MT_Subscriber::PopMostRecentReceivedMessage() {
+  boost::mutex::scoped_lock lock(messages_mutex_);
+  std::string message = messages_.back();
+  messages_.pop_back();
+  return message;
+}
+
+std::string MT_Subscriber::PopOldestReceivedMessage() {
+  boost::mutex::scoped_lock lock(messages_mutex_);
+  std::string message = messages_.front();
+  messages_.pop_front();
+  return message;
+}
+
+void MT_Subscriber::Connect() {  
+  const boost::posix_time::time_duration CONNECTION_ATTEMPT_PERIOD = boost::posix_time::seconds(1);
+
+  boost::asio::deadline_timer connection_timer(io_service_, CONNECTION_ATTEMPT_PERIOD);
+  while (!connected_) {
+    connection_timer.expires_from_now(CONNECTION_ATTEMPT_PERIOD);
+    connection_timer.wait();
+    boost::asio::ip::tcp::resolver resolver(io_service_);
+    boost::asio::ip::tcp::resolver::query query(host_, service_);    
+    boost::asio::ip::tcp::resolver::iterator endpoint_iterator =
+      resolver.resolve(query);
+    do {
+      boost::asio::ip::tcp::endpoint endpoint = *endpoint_iterator;
+      boost::system::error_code error_code;
+      socket_.connect(endpoint, error_code);
+      std::cerr << "Subscriber: " << error_code.message() << std::endl;
+      if (!error_code) {
+	connected_ = true;
+	AsyncRead(boost::bind(&MT_Subscriber::HandleRead, this,
+			      boost::asio::placeholders::error)); 
+	ping_timer_.expires_from_now(MT_NET_PING_CHECK_PERIOD);
+	ping_timer_.async_wait(boost::bind(&MT_Subscriber::PingTimeout, this, boost::asio::placeholders::error));
+	
+      }
+      endpoint_iterator++;
+    } while (!connected_ && endpoint_iterator != boost::asio::ip::tcp::resolver::iterator());
+  }
 }
 
 // Asynchronously read a data structure from the socket.
 template <typename Handler>
 void MT_Subscriber::AsyncRead(Handler handler)
 {
+  std::cerr << "Subscriber: AsyncRead" << std::endl;
   // Issue a read operation to read exactly the number of bytes in a header.
   void (MT_Subscriber::*f)(
 			const boost::system::error_code&,
@@ -56,6 +95,7 @@ template <typename Handler>
 void MT_Subscriber::HandleReadHeader(const boost::system::error_code& e,
 				  boost::tuple<Handler> handler)
 {
+  std::cerr << "Subscriber: HandleReadHeader" << std::endl;
   if (e)
     {
       boost::get<0>(handler)(e);
@@ -90,63 +130,57 @@ template <typename Handler>
 void MT_Subscriber::HandleReadData(const boost::system::error_code& e,
 				boost::tuple<Handler> handler)
 {
+  std::cerr << "Subscriber: HandleReadData" << std::endl;
   if (e)
     {
       boost::get<0>(handler)(e);
     }
   else
-    {           
-      HandleNewMessage(std::string(inbound_data_.begin(), inbound_data_.end()));
-
+    {
+      std::cerr << "Subscriber: First data character: " << inbound_data_.front() << std::endl;
+      if (inbound_data_.front() == MT_NET_MESSAGE_CHAR) {
+	boost::mutex::scoped_lock lock(messages_mutex_);
+	messages_.push_back(std::string(inbound_data_.begin(), inbound_data_.end()));
+      }
       // Inform caller that data has been received ok.
       boost::get<0>(handler)(e);
-    }
-}
-
-void MT_Subscriber::HandleConnect(const boost::system::error_code& e,
-			       boost::asio::ip::tcp::resolver::iterator endpoint_iterator)
-{
-  if (!e)
-    {
-      std::cout << "Successfully connected to server" << std::endl;
-
-      AsyncRead(boost::bind(&MT_Subscriber::HandleRead, this,
-			    boost::asio::placeholders::error)); 
-    }
-  else if (endpoint_iterator != boost::asio::ip::tcp::resolver::iterator())
-    {
-      // Try the next endpoint.
-      socket_.close();
-      boost::asio::ip::tcp::endpoint endpoint = *endpoint_iterator;
-      socket_.async_connect(endpoint,
-			    boost::bind(&MT_Subscriber::HandleConnect, this,
-					boost::asio::placeholders::error, ++endpoint_iterator));
-    }
-  else
-    {
-      // An error occurred. Log it and return. Since we are not starting a new
-      // operation the io_service will run out of work to do and the client will
-      // exit.
-      std::cerr << e.message() << std::endl;
     }
 }
 
 /// Handle completion of a read operation.
 void MT_Subscriber::HandleRead(const boost::system::error_code& e)
 {
+  std::cerr << "Subscriber: HandleRead" << std::endl;
   if (!e)
     {
+      if (connected_) {
+	ping_timer_.expires_from_now(MT_NET_PING_CHECK_PERIOD);
+	ping_timer_.async_wait(boost::bind(&MT_Subscriber::PingTimeout, this, boost::asio::placeholders::error));
+	AsyncRead(boost::bind(&MT_Subscriber::HandleRead, this,
+			      boost::asio::placeholders::error)); 
+      }
       // Print out the data that was received.
       //std::cout << test_data_.phrase() << std::endl;
     }
   else
     {
       // An error occurred.
-      std::cerr << e.message() << std::endl;
+      std::cerr << "Subscriber: " << e.message() << std::endl;
     }
+}
 
-  AsyncRead(boost::bind(&MT_Subscriber::HandleRead, this,
-			boost::asio::placeholders::error)); 
+void MT_Subscriber::RunService() {
+  Connect();
+  io_service_.run();
+}
+
+void MT_Subscriber::PingTimeout(const boost::system::error_code &error_code) {
+  if (!error_code) {
+    std::cerr << "Subscriber: Ping timeout" << std::endl;
+    socket_.close();
+    connected_ = false;
+    Connect();
+  }
 }
 
 

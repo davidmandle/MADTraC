@@ -3,7 +3,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
 
 /// Publishes information to any subscriber that connects to it.
 class MT_Publisher {
@@ -11,19 +10,20 @@ class MT_Publisher {
   MT_Publisher(unsigned short port);
   ~MT_Publisher();
  protected:
-  bool Publish(std::string outbound_data);
+  bool Publish(std::string message);
  private:
   void AcceptSubscription();
-  void HandleNewSubscription(const boost::system::error_code& e);
   void HandleWrite(const boost::system::error_code& e);
+  bool Write(std::string outbound_data);
   void RunService();
-  bool has_client_;
+  void StartPinging(const boost::system::error_code &error_code);
+  bool connected_;
   boost::asio::io_service io_service_;
   boost::shared_ptr<boost::asio::ip::tcp::socket> socket_;
   boost::asio::ip::tcp::acceptor acceptor_;
   bool keep_running_io_service_;
   boost::thread io_service_runner_;
-  boost::mutex mutex_;
+  boost::asio::deadline_timer ping_timer_;
   enum { header_length = 8 };  
 };
 
