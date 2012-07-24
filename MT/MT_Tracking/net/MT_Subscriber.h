@@ -5,6 +5,8 @@
 #include <boost/tuple/tuple.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
+
 #include <list>
 #include <vector>
 #include <string>
@@ -13,10 +15,12 @@ class MT_Subscriber
 {
  public:
   MT_Subscriber(const std::string& host, const std::string& service);
+  ~MT_Subscriber();
   int NumberOfQueuedMessages();
   void EmptyQueue();
   std::string PopMostRecentReceivedMessage();
   std::string PopOldestReceivedMessage();
+  bool WaitForNewMessage(int timeout_ms);
 
  private:
   void Connect();
@@ -40,10 +44,13 @@ class MT_Subscriber
   const std::string host_;
   const std::string service_;
   bool connected_;
+  bool keep_running_io_service_;
   boost::thread io_service_runner_;
   boost::asio::deadline_timer ping_timer_;
   std::list<std::string> messages_;
   boost::mutex messages_mutex_;
+  boost::timed_mutex new_message_mutex_;
+  boost::condition_variable new_message_condition_variable_;
 };
 
 #endif  // MT_SUBSCRIBER_H_

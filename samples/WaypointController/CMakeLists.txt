@@ -14,6 +14,11 @@ cmake_minimum_required (VERSION 2.8)
 # name of the project - this has to come first
 project(WaypointController)
 
+# MADTRaC information
+set(MT_ROOT $ENV{MT_ROOT} CACHE PATH "MADTraC root directory")
+# sets variables related to MT
+include(${MT_ROOT}/cmake/MT_Config.cmake)
+
 # set the name of the built target
 set(APP_NAME WaypointController)
 
@@ -28,19 +33,6 @@ include_directories(src)
 # sets up the build target
 add_executable(${APP_NAME} ${APP_SRC})
 
-# MADTRaC information
-set(MT_ROOT $ENV{MT_ROOT} CACHE PATH "MADTraC root directory")
-# sets variables related to MT
-include(${MT_ROOT}/cmake/MT_Config.cmake)
+
 # sets up the app to build correctly using the right libraries, etc
-MT_tracking_app(${APP_NAME})
-
-# use boost
-find_package(Boost 1.36.0 COMPONENTS system thread)
-include_directories(
-  ${Boost_INCLUDE_DIRS}
-)
-
-target_link_libraries (${APP_NAME}
-  ${Boost_LIBRARIES}
-  )
+MT_robot_app(${APP_NAME})

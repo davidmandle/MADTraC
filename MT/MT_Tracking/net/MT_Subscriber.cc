@@ -14,9 +14,16 @@ MT_Subscriber::MT_Subscriber(const std::string& host, const std::string& service
     host_(host),
     service_(service),
     connected_(false),
+	keep_running_io_service_(true),
     io_service_runner_(boost::bind(&MT_Subscriber::RunService, this)),
     ping_timer_(io_service_, MT_NET_PING_CHECK_PERIOD)
 {
+}
+
+MT_Subscriber::~MT_Subscriber() {
+	keep_running_io_service_ = false;
+	io_service_.stop();
+	io_service_runner_.join();
 }
 
 void MT_Subscriber::EmptyQueue() {
@@ -41,6 +48,30 @@ std::string MT_Subscriber::PopOldestReceivedMessage() {
   std::string message = messages_.front();
   messages_.pop_front();
   return message;
+}
+
+struct queue_has_new_message
+    {
+        std::list<std::string>& messages_;
+		int initial_size_;
+
+		queue_has_new_message(std::list<std::string>& messages, int initial_size):
+            messages_(messages), initial_size_(initial_size)
+        {}
+        bool operator()() const
+        {
+            return (messages_.size() > initial_size_);
+        }
+    };
+
+bool MT_Subscriber::WaitForNewMessage(int timeout_ms) {
+	boost::posix_time::milliseconds	timeout(timeout_ms);
+	boost::mutex::scoped_lock lock(messages_mutex_);	
+	int initial_size = messages_.size();
+	if(!new_message_condition_variable_.timed_wait(lock,timeout,queue_has_new_message(messages_, initial_size))) {
+		return false;
+	}
+	return true;
 }
 
 void MT_Subscriber::Connect() {  
@@ -76,7 +107,6 @@ void MT_Subscriber::Connect() {
 template <typename Handler>
 void MT_Subscriber::AsyncRead(Handler handler)
 {
-  std::cerr << "Subscriber: AsyncRead" << std::endl;
   // Issue a read operation to read exactly the number of bytes in a header.
   void (MT_Subscriber::*f)(
 			const boost::system::error_code&,
@@ -95,7 +125,6 @@ template <typename Handler>
 void MT_Subscriber::HandleReadHeader(const boost::system::error_code& e,
 				  boost::tuple<Handler> handler)
 {
-  std::cerr << "Subscriber: HandleReadHeader" << std::endl;
   if (e)
     {
       boost::get<0>(handler)(e);
@@ -130,7 +159,6 @@ template <typename Handler>
 void MT_Subscriber::HandleReadData(const boost::system::error_code& e,
 				boost::tuple<Handler> handler)
 {
-  std::cerr << "Subscriber: HandleReadData" << std::endl;
   if (e)
     {
       boost::get<0>(handler)(e);
@@ -139,8 +167,11 @@ void MT_Subscriber::HandleReadData(const boost::system::error_code& e,
     {
       std::cerr << "Subscriber: First data character: " << inbound_data_.front() << std::endl;
       if (inbound_data_.front() == MT_NET_MESSAGE_CHAR) {
-	boost::mutex::scoped_lock lock(messages_mutex_);
-	messages_.push_back(std::string(inbound_data_.begin(), inbound_data_.end()));
+		{
+			boost::mutex::scoped_lock lock(messages_mutex_);
+			messages_.push_back(std::string(++inbound_data_.begin(), inbound_data_.end()));
+		}
+		new_message_condition_variable_.notify_one();
       }
       // Inform caller that data has been received ok.
       boost::get<0>(handler)(e);
@@ -150,7 +181,6 @@ void MT_Subscriber::HandleReadData(const boost::system::error_code& e,
 /// Handle completion of a read operation.
 void MT_Subscriber::HandleRead(const boost::system::error_code& e)
 {
-  std::cerr << "Subscriber: HandleRead" << std::endl;
   if (!e)
     {
       if (connected_) {
@@ -170,13 +200,15 @@ void MT_Subscriber::HandleRead(const boost::system::error_code& e)
 }
 
 void MT_Subscriber::RunService() {
-  Connect();
-  io_service_.run();
+  while (keep_running_io_service_) {	
+	Connect();
+	io_service_.run();
+  }
 }
 
 void MT_Subscriber::PingTimeout(const boost::system::error_code &error_code) {
   if (!error_code) {
-    std::cerr << "Subscriber: Ping timeout" << std::endl;
+    std::cout << "Subscriber: Ping timeout" << std::endl;
     socket_.close();
     connected_ = false;
     Connect();
