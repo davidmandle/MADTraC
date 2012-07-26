@@ -4,6 +4,7 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <iostream>
+#include <iomanip>
 #include <list>
 #include "MT_Subscriber.h"
 #include "MT_NetConstants.h"
@@ -16,7 +17,8 @@ MT_Subscriber::MT_Subscriber(const std::string& host, const std::string& service
     connected_(false),
 	keep_running_io_service_(true),
     io_service_runner_(boost::bind(&MT_Subscriber::RunService, this)),
-    ping_timer_(io_service_, MT_NET_PING_CHECK_PERIOD)
+    outgoing_ping_timer_(io_service_, MT_NET_PING_PERIOD),
+    incoming_ping_timer_(io_service_, MT_NET_PING_CHECK_PERIOD)
 {
 }
 
@@ -92,10 +94,12 @@ void MT_Subscriber::Connect() {
       std::cerr << "Subscriber: " << error_code.message() << std::endl;
       if (!error_code) {
 	connected_ = true;
+	boost::system::error_code error_code;
+	StartPinging(error_code);
 	AsyncRead(boost::bind(&MT_Subscriber::HandleRead, this,
 			      boost::asio::placeholders::error)); 
-	ping_timer_.expires_from_now(MT_NET_PING_CHECK_PERIOD);
-	ping_timer_.async_wait(boost::bind(&MT_Subscriber::PingTimeout, this, boost::asio::placeholders::error));
+	incoming_ping_timer_.expires_from_now(MT_NET_PING_CHECK_PERIOD);
+	incoming_ping_timer_.async_wait(boost::bind(&MT_Subscriber::PingTimeout, this, boost::asio::placeholders::error));
 	
       }
       endpoint_iterator++;
@@ -184,8 +188,8 @@ void MT_Subscriber::HandleRead(const boost::system::error_code& e)
   if (!e)
     {
       if (connected_) {
-	ping_timer_.expires_from_now(MT_NET_PING_CHECK_PERIOD);
-	ping_timer_.async_wait(boost::bind(&MT_Subscriber::PingTimeout, this, boost::asio::placeholders::error));
+	incoming_ping_timer_.expires_from_now(MT_NET_PING_CHECK_PERIOD);
+	incoming_ping_timer_.async_wait(boost::bind(&MT_Subscriber::PingTimeout, this, boost::asio::placeholders::error));
 	AsyncRead(boost::bind(&MT_Subscriber::HandleRead, this,
 			      boost::asio::placeholders::error)); 
       }
@@ -197,6 +201,52 @@ void MT_Subscriber::HandleRead(const boost::system::error_code& e)
       // An error occurred.
       std::cerr << "Subscriber: " << e.message() << std::endl;
     }
+}
+
+bool MT_Subscriber::Write(std::string outbound_data) {
+  if (!connected_) {
+    return false;
+  }
+
+  // Format the header.
+  std::ostringstream header_stream;
+  header_stream << std::setw(header_length)
+		<< std::hex << outbound_data.size();
+  if (!header_stream || header_stream.str().size() != header_length)
+    {
+      std::cerr << "Failed to construct header" <<std::endl;
+      return false;
+    }
+  std::string outbound_header = header_stream.str();  
+  // Write the serialized data to the sockets. We use "gather-write" to send
+  // both the header and the data in a single write operation.
+  std::vector<boost::asio::const_buffer> outbound_buffers;
+  outbound_buffers.push_back(boost::asio::buffer(outbound_header));
+  outbound_buffers.push_back(boost::asio::buffer(outbound_data));  
+	
+  boost::system::error_code error_code;
+  boost::asio::write(socket_, outbound_buffers, error_code);
+	
+  if (!error_code) {
+    std::cout << "Subscriber: Writing successful" << std::endl;
+    outgoing_ping_timer_.expires_from_now(MT_NET_PING_PERIOD);   
+    outgoing_ping_timer_.async_wait(boost::bind(&MT_Subscriber::StartPinging, this, boost::asio::placeholders::error));
+    return true;
+  }
+  else {
+    std::cout << "Subscriber: Disconnected: " << error_code.message() << std::endl;
+    socket_.close();
+    connected_ = false;
+    Connect();
+  }
+  return false;
+}
+
+void MT_Subscriber::StartPinging(const boost::system::error_code &error_code) {
+  if (!error_code) {
+    std::cout << "Subscriber: PING!" << std::endl;
+    Write(std::string(1, MT_NET_PING_CHAR));    
+  }
 }
 
 void MT_Subscriber::RunService() {

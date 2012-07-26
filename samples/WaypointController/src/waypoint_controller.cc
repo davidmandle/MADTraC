@@ -30,15 +30,14 @@ private:
 	MT_Kinematics* kinematics = agent_states.mutable_agent_state(i)->mutable_generic_agent_control()->mutable_kinematics();
 
 	MT_Waypoint waypoint = generic_agent_control.waypoint();
-	MT_TrackedAgentState tracked_agent_state = agent_state.tracked_agent_state();
+	MT_TrackedAgentState tracked_agent_state = agent_states.agent_state(i).tracked_agent_state();
 
 	double dx = waypoint.x() - tracked_agent_state.x();
 	double dy = waypoint.y() - tracked_agent_state.y();
 	double dz = waypoint.z() - tracked_agent_state.z();
 
-	std::cerr << "waypoint x: " << waypoint.x() << std::endl;
-	std::cerr << "waypoint y: " << waypoint.y() << std::endl;
-	std::cerr << "waypoint z: " << waypoint.z() << std::endl;
+	//std::cerr << "waypoint x: " << waypoint.x() << std::endl;
+	//std::cerr << "waypoint y: " << waypoint.y() << std::endl;
 
 	double dth = atan2(dy, dx) - tracked_agent_state.heading();
 	dth = atan2(sin(dth), cos(dth));
@@ -72,10 +71,9 @@ private:
 
 	agent_states.mutable_agent_state(i)->mutable_generic_agent_control()->clear_waypoint();
 	
-	std::cerr << "dx = " << dx <<", dy = " << dy << ", dth = " << dth << ", dz = " << dz << std::endl;
-	std::cerr << "Control out: speed " << agent_states.agent_state(i).generic_agent_control().kinematics().speed() << ", vert " << agent_states.agent_state(i).generic_agent_control().kinematics().z_dot() << ", steer " << agent_states.agent_state(i).generic_agent_control().kinematics().omega() << std::endl;
-      }	
-    }
+	//std::cerr << "dx = " << dx <<", dy = " << dy << ", dth = " << dth << ", dz = " << dz << std::endl;
+	//std::cerr << "Control out: speed " << agent_states.agent_state(i).generic_agent_control().kinematics().speed() << ", vert " << agent_states.agent_state(i).generic_agent_control().kinematics().z_dot() << ", steer " << agent_states.agent_state(i).generic_agent_control().kinematics().omega() << std::endl;
+      }	    
   }
   publisher_.Publish(agent_states);
 }

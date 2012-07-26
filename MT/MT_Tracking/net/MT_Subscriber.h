@@ -35,7 +35,8 @@ class MT_Subscriber
   void HandleRead(const boost::system::error_code& e);
   void RunService();
   void PingTimeout(const boost::system::error_code &error_code);
-      
+  bool Write(std::string outbound_data);
+  void StartPinging(const boost::system::error_code &error_code);
   enum { header_length = 8 };
   char inbound_header_[header_length];
   std::vector<char> inbound_data_;
@@ -46,7 +47,8 @@ class MT_Subscriber
   bool connected_;
   bool keep_running_io_service_;
   boost::thread io_service_runner_;
-  boost::asio::deadline_timer ping_timer_;
+  boost::asio::deadline_timer outgoing_ping_timer_;
+  boost::asio::deadline_timer incoming_ping_timer_;
   std::list<std::string> messages_;
   boost::mutex messages_mutex_;
   boost::timed_mutex new_message_mutex_;

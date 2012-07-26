@@ -4,6 +4,8 @@
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <vector>
 
 /// Publishes information to any subscriber that connects to it.
 class MT_Publisher {
@@ -26,6 +28,16 @@ class MT_Publisher {
   std::vector<boost::asio::const_buffer> outbound_buffers_;
   bool Write(std::string outbound_data);
   void RunService();
+  template <typename Handler>
+    void AsyncRead(Handler handler);
+  template <typename Handler>
+    void HandleReadHeader(const boost::system::error_code& e,
+			  boost::tuple<Handler> handler);
+  template <typename Handler>
+    void HandleReadData(const boost::system::error_code& e,
+			boost::tuple<Handler> handler);
+  void HandleRead(const boost::system::error_code& e);
+  void PingTimeout(const boost::system::error_code &error_code);
   void StartPinging(const boost::system::error_code &error_code);
   bool connected_;
   boost::asio::io_service io_service_;
@@ -37,8 +49,11 @@ class MT_Publisher {
   boost::mutex connected_mutex_;
   boost::mutex accept_subscription_mutex_;
   boost::thread io_service_runner_;
-  boost::asio::deadline_timer ping_timer_;
+  boost::asio::deadline_timer outgoing_ping_timer_;
+  boost::asio::deadline_timer incoming_ping_timer_;  
   enum { header_length = 8 };  
+  char inbound_header_[header_length];
+  std::vector<char> inbound_data_;
 };
 
 #endif  // MT_PUBLISHER_H_
