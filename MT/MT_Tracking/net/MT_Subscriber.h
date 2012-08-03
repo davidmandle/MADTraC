@@ -37,6 +37,8 @@ class MT_Subscriber
   void PingTimeout(const boost::system::error_code &error_code);
   bool Write(std::string outbound_data);
   void StartPinging(const boost::system::error_code &error_code);
+  bool connected();
+  void set_connected(bool connected);
   enum { header_length = 8 };
   char inbound_header_[header_length];
   std::vector<char> inbound_data_;
@@ -51,6 +53,7 @@ class MT_Subscriber
   boost::asio::deadline_timer incoming_ping_timer_;
   std::list<std::string> messages_;
   boost::mutex messages_mutex_;
+  boost::mutex connected_mutex_;
   boost::timed_mutex new_message_mutex_;
   boost::condition_variable new_message_condition_variable_;
 };

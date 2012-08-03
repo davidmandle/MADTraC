@@ -34,16 +34,20 @@ void MT_Publisher::AcceptSubscription(){
   std::cout << "Publisher: AcceptSubscription" << std::endl;
   const boost::posix_time::time_duration CONNECTION_ATTEMPT_PERIOD = boost::posix_time::seconds(1);
 
-  boost::asio::deadline_timer connection_timer(io_service_, CONNECTION_ATTEMPT_PERIOD);
-  while (!connected()) {
-    connection_timer.expires_from_now(CONNECTION_ATTEMPT_PERIOD);
-    connection_timer.wait();
+  boost::asio::deadline_timer connection_timer(io_service_, CONNECTION_ATTEMPT_PERIOD);  
+  connection_timer.expires_from_now(CONNECTION_ATTEMPT_PERIOD);
+  connection_timer.wait();
 
     boost::shared_ptr<boost::asio::ip::tcp::socket> new_socket_ptr(new boost::asio::ip::tcp::socket(io_service_));
     socket_ = new_socket_ptr;
     boost::system::error_code error_code;
-    acceptor_.accept(*socket_, error_code);
-    if (!error_code) {
+	acceptor_.async_accept(*socket_, boost::bind(&MT_Publisher::HandleAccept, this, boost::asio::placeholders::error));
+    
+  set_accept_subscription(false);
+}
+
+void MT_Publisher::HandleAccept(const boost::system::error_code& error_code) {
+	if (!error_code) {
       std::cout << "Publisher: Now connected to client" << std::endl;
       set_connected(true);
 
@@ -57,10 +61,10 @@ void MT_Publisher::AcceptSubscription(){
     }
     else {
       socket_->close();
+	  set_accept_subscription(true);
     }
-  }
-  set_accept_subscription(false);
 }
+
 
 bool MT_Publisher::Publish(std::string message) {
   return Write(std::string(1, MT_NET_MESSAGE_CHAR)+message);
@@ -117,7 +121,7 @@ void MT_Publisher::RunService() {
     if (accept_subscription()) {
       AcceptSubscription();
     }
-    io_service_.run_one();
+    io_service_.poll_one();
   }
 }
 
