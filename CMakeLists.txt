@@ -419,11 +419,20 @@ endif(MSVC)
 
 ##################################################
 # Protobuf Support
-
-set(PROTOBUF_LIBRARY "D:/dsrc/protobuf-2.4.1/vsprojects/${CMAKE_CFG_INTDIR}/libprotobuf.lib" CACHE PATH "Protocol Buffer Library")
-set(PROTOBUF_INCLUDE_DIR "D:/dsrc/protobuf-2.4.1/vsprojects/include" CACHE PATH "Protocol Buffer Include Directory")
-set(PROTOBUF_PROTOC_EXECUTABLE "D:/dsrc/protobuf-2.4.1/vsprojects/${CMAKE_CFG_INTDIR}/protoc.exe" CACHE PATH "Protocol Executable Directory")
-
+if(MSVC)
+option(AUTO_FIND_PROTOBUF "Automatically find protobuf on the system.  Otherwise look in PROTOBUF_ROOT." OFF)
+if(NOT AUTO_FIND_PROTOBUF)	
+	set(PROTOBUF_ROOT "D:/dsrc/protobuf-2.4.1" CACHE PATH "Path to Boost library.")
+	set(PROTOBUF_LIBRARY "D:/dsrc/protobuf-2.4.1/vsprojects/${CMAKE_CFG_INTDIR}/libprotobuf.lib" CACHE PATH "Protocol Buffer Library")
+	set(PROTOBUF_INCLUDE_DIR "D:/dsrc/protobuf-2.4.1/vsprojects/include" CACHE PATH "Protocol Buffer Include Directory")
+	set(PROTOBUF_PROTOC_EXECUTABLE "D:/dsrc/protobuf-2.4.1/vsprojects/${CMAKE_CFG_INTDIR}/protoc.exe" CACHE PATH "Protocol Executable Directory")
+else(NOT AUTO_FIND_PROTOBUF)
+	unset(PROTOBUF_ROOT CACHE)
+	unset(PROTOBUF_LIBRARY CACHE)
+	unset(PROTOBUF_INCLUDE_DIR CACHE)
+	unset(PROTOBUF_PROTOC_EXECUTABLE CACHE)	
+endif(NOT AUTO_FIND_PROTOBUF)
+endif(MSVC)
 find_package(Protobuf REQUIRED)
 if(PROTOBUF_FOUND)
   set(PROTOBUF_LIB "${PROTOBUF_LIBRARIES}" CACHE PATH "Protobuf Libs")
@@ -432,9 +441,8 @@ endif(PROTOBUF_FOUND)
 
 ##################################################
 # Boost Support
-set(BOOST_ROOT "C:/Program Files (x86)/boost/boost_1_47")
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.36.0 COMPONENTS system thread date_time regex)
+find_package(Boost 1.36.0 COMPONENTS system thread date_time regex REQUIRED)
 if (Boost_FOUND)  
   set(BOOST_LIB "${Boost_LIBRARIES}" CACHE PATH "Boost Libs")
   set(BOOST_INCLUDE "${Boost_INCLUDE_DIR}" CACHE PATH "Boost Include Directory")
