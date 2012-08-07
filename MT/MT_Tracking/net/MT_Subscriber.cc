@@ -253,11 +253,10 @@ void MT_Subscriber::StartPinging(const boost::system::error_code &error_code) {
 }
 
 void MT_Subscriber::RunService() {
-	while (keep_running_io_service_) {
-		if (!connected()) {
-			Connect();
-		}
-		io_service_.poll_one();
+	while (keep_running_io_service_) {		
+		Connect();		
+		io_service_.run();
+		io_service_.reset();
   }
 }
 

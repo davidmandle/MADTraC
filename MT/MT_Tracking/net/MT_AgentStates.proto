@@ -21,19 +21,13 @@ message MT_Kinematics {
 }
 
 message MT_GenericAgentControl {
-	enum MT_ControlMode {
-	     MT_WAYPOINT_CONTROL = 0;	
-	     MT_KINEMATICS_CONTROL = 1;
-	}
-	required MT_ControlMode control_mode = 1;
-	optional MT_Waypoint waypoint = 2;
-	optional MT_Kinematics kinematics = 3;
+	optional MT_Waypoint waypoint = 1;
+	optional MT_Kinematics kinematics = 2;
 }
 
 message MT_AgentState {
-	required bool being_tracked = 1;
-	optional MT_TrackedAgentState tracked_agent_state = 2;
-	optional MT_GenericAgentControl generic_agent_control = 3;
+	optional MT_TrackedAgentState tracked_agent_state = 1;
+	optional MT_GenericAgentControl generic_agent_control = 2;
 
 }
 

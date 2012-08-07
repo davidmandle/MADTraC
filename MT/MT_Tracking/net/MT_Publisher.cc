@@ -121,7 +121,8 @@ void MT_Publisher::RunService() {
     if (accept_subscription()) {
       AcceptSubscription();
     }
-    io_service_.poll_one();
+    io_service_.run();
+	io_service_.reset();
   }
 }
 
@@ -251,4 +252,7 @@ bool MT_Publisher::accept_subscription() {
 void MT_Publisher::set_accept_subscription(bool accept_subscription) {
   boost::mutex::scoped_lock lock(accept_subscription_mutex_);
   accept_subscription_ = accept_subscription;
+  if (accept_subscription) {
+	  io_service_.stop();
+  }
 }
