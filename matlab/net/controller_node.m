@@ -2,7 +2,7 @@ function [ output_args ] = controller_node(subscribing_machine, subscribing_port
     MT_NET_PING_CHAR = '0';
     MT_NET_MESSAGE_CHAR = '1';
     MT_NET_PING_PERIOD = 1;
-    MT_NET_PING_CHECK_PERIOD = 5;
+    MT_NET_PING_CHECK_PERIOD = 3;
     HEADER_LENGTH = 8;
 
     subscriber=tcpip(subscribing_machine, subscribing_port,'NetworkRole', 'client');
@@ -80,12 +80,20 @@ function [ output_args ] = controller_node(subscribing_machine, subscribing_port
         % publisher.
         if strcmp(subscriber.status, 'open')  
             if subscriber.BytesAvailable > 0
-                header=fread(subscriber, [1 HEADER_LENGTH], 'char');
-                subscriber_incoming_ping_timer = tic;
-                message_length = hex2dec(char(header));
-                message = fread(subscriber, [1 message_length], 'char');
-                if message(1) == MT_NET_MESSAGE_CHAR
-                    agent_states = pb_read_MT_AgentStates(uint8(message(2:end)));
+                most_recent_data_message = [];
+                % Read through all the messages, we're only interested in
+                % the most recent                
+                while subscriber.BytesAvailable > 0
+                    header=fread(subscriber, [1 HEADER_LENGTH], 'char');
+                    subscriber_incoming_ping_timer = tic;
+                    message_length = hex2dec(char(header));
+                    message = fread(subscriber, [1 message_length], 'char');
+                    if message(1) == MT_NET_MESSAGE_CHAR
+                        most_recent_data_message = message;
+                    end
+                end
+                if ~isempty(most_recent_data_message)
+                    agent_states = pb_read_MT_AgentStates(uint8(most_recent_data_message(2:end)));
 
                     % --------------
                     for i = 1:length(function_handles)

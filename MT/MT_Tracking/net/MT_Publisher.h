@@ -12,12 +12,12 @@ class MT_Publisher {
  public:
   MT_Publisher(unsigned short port);
   ~MT_Publisher();
+  bool connected();
  protected:
   bool Publish(std::string message);
  private:
   void AcceptSubscription();
-  void HandleAccept(const boost::system::error_code& e);
-  bool connected();
+  void HandleAccept(const boost::system::error_code& e);  
 	void set_connected(bool connected);
 	bool keep_running_io_service();
 	void set_keep_running_io_service(bool keep_running_io_service);

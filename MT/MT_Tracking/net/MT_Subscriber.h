@@ -21,6 +21,7 @@ class MT_Subscriber
   std::string PopMostRecentReceivedMessage();
   std::string PopOldestReceivedMessage();
   bool WaitForNewMessage(int timeout_ms);
+  bool connected();
 
  private:
   void Connect();
@@ -36,8 +37,7 @@ class MT_Subscriber
   void RunService();
   void PingTimeout(const boost::system::error_code &error_code);
   bool Write(std::string outbound_data);
-  void StartPinging(const boost::system::error_code &error_code);
-  bool connected();
+  void StartPinging(const boost::system::error_code &error_code);  
   void set_connected(bool connected);
   enum { header_length = 8 };
   char inbound_header_[header_length];

@@ -11,8 +11,8 @@ public:
     : publisher_(port), 
       subscriber_(parent_address, parent_port) {
     while (true) {
-      if (subscriber_.WaitForNewMessage(100)) {		
-	MT_AgentStates agent_states = subscriber_.PopMostRecentReceivedMessage();
+		if (subscriber_.NumberOfQueuedMessages() > 0) {
+	 MT_AgentStates agent_states = subscriber_.PopMostRecentReceivedMessage();     
 	subscriber_.EmptyQueue();
 	HandleNewMessage(agent_states);
       }
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
       // Check command line arguments.
       if (argc != 4)
 	{
-	  std::cerr << "Usage: " << argv[0] <<  " <parent_address> <parent_port> <port>" << std::endl;
+	  std::cerr << "Usage: " << argv[0] <<  " <subscribing_machine> <subscribing_port> <publishing_port>" << std::endl;
 	  return 1;
 	}
 
